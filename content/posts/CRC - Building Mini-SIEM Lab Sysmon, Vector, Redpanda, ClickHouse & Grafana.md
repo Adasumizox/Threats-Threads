@@ -1,9 +1,6 @@
- ---
- title: "Building a Mini-SIEM Lab: Sysmon, Vector, Redpanda, ClickHouse & Grafana"
++++ title: "Building a Mini-SIEM Lab: Sysmon, Vector, Redpanda, ClickHouse & Grafana"
  date: 2026-02-22
- description: "A step-by-step guide for students to build a modern, high-performance local SIEM using Windows WSL2 and Podman"
- tags: ["SIEM", "Cybersecurity", "ClickHouse", "Vector", "Grafana", "Podman"]
- ---
+ [taxonomies] tags=["SIEM", "Cybersecurity", "ClickHouse", "Vector", "Grafana", "Podman"] +++
 Building a Security Information and Event Management (SIEM) system from scratch is one of the best ways to understand how those enterprise system works.
 
 In this lab, we will build a modern log pipeline using Windows host and WSL2 (Debian). Before diving into the code, let's understand core architecture of our pipeline:

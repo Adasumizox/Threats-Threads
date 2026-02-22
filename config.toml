@@ -11,3 +11,7 @@ socials = [
     { name = "github", url = "https://github.com/adasumizox", icon = "github" },
     { name = "linkedin", url = "https://www.linkedin.com/in/daniel-jeczen/", icon = "linkedin" }
 ]
+menu = [
+    { name = "/posts", url = "/posts", weight = 1 },
+    { name = "/tags", url = "/tags", weight = 2 }
+]
