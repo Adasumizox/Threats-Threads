@@ -8,6 +8,6 @@ theme = "apollo"
 theme = "auto"
 author = "Daniel Jeczen"
 socials = [
-    github = "https://github.com/adasumizox"
-    linkedin = "https://www.linkedin.com/in/daniel-jeczen/"
+    { name = "github", url = "https://github.com/adasumizox", icon = "github" },
+    { name = "linkedin", url = "https://www.linkedin.com/in/daniel-jeczen/", icon = "linkedin" }
 ]
