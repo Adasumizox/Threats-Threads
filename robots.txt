@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+Allow: /
+Sitemap: https://adasumizox.github.io/Threats-Threads/sitemap.xml

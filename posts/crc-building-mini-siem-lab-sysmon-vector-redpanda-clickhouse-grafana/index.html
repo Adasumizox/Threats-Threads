@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en" class="dark light">
+
+    <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="base" content="https:&#x2F;&#x2F;adasumizox.github.io&#x2F;Threats-Threads" />
+
+    
+
+    
+
+    
+    
+    
+        <title>
+            
+                Building a Mini-SIEM Lab: Sysmon, Vector, Redpanda, ClickHouse &amp; Grafana
+            
+        </title>
+
+        
+            <meta property="og:title"
+                  content="Building a Mini-SIEM Lab: Sysmon, Vector, Redpanda, ClickHouse &amp; Grafana" />
+        
+    
+
+    
+        
+            <meta property="og:description" content="Simple blog about Cybersecurity, Tech &amp; More" />
+        
+    
+
+    
+        
+            <meta name="description" content="Simple blog about Cybersecurity, Tech &amp; More" />
+        
+    
+
+    
+    
+
+    
+    
+        <link href=https://adasumizox.github.io/Threats-Threads/fonts.css rel="stylesheet" />
+    
+
+    
+    
+
+    
+    
+
+    
+    
+
+    
+    
+
+    
+    
+
+    
+
+    
+    
+
+
+    
+    
+        <link rel="stylesheet"
+              type="text/css"
+              href="https://adasumizox.github.io/Threats-Threads/theme/light.css" />
+        <link rel="stylesheet"
+              type="text/css"
+              href="https://adasumizox.github.io/Threats-Threads/theme/dark.css"
+              media="(prefers-color-scheme: dark)" />
+    
+
+    <!-- Set the correct theme in the script -->
+
+    
+        <script src=https://adasumizox.github.io/Threats-Threads/js/themetoggle.js></script>
+
+        
+            <script>
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    setTheme("dark");
+                } else {
+                    setTheme("light");
+                }
+            </script>
+        
+    
+
+
+    <link rel="stylesheet"
+          type="text/css"
+          media="screen"
+          href="https://adasumizox.github.io/Threats-Threads/main.css" />
+
+    
+
+    </head>
+
+
+    <body>
+        <div class="left-content">
+            
+            
+        </div>
+
+        <div class="content">
+            <nav>
+    <div class="left-nav">
+        
+            <a href=https:&#x2F;&#x2F;adasumizox.github.io&#x2F;Threats-Threads>Threats &amp; Threads</a>
+        
+
+
+        <div class="socials">
+            
+                
+            
+            
+                <a rel='me' href="https:&#x2F;&#x2F;github.com&#x2F;adasumizox" class="social">
+                    <img alt="github"
+                         src="https://adasumizox.github.io/Threats-Threads/icons/social/github.svg" />
+                </a>
+            
+                <a rel='me' href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;daniel-jeczen&#x2F;" class="social">
+                    <img alt="linkedin"
+                         src="https://adasumizox.github.io/Threats-Threads/icons/social/linkedin.svg" />
+                </a>
+            
+        </div>
+    </div>
+
+    <div class="right-nav">
+        
+            <a href=https://adasumizox.github.io/Threats-Threads/posts style="margin-right: 0.5em">&#x2F;posts</a>
+        
+            <a href=https://adasumizox.github.io/Threats-Threads/tags style="margin-right: 0.5em">&#x2F;tags</a>
+        
+
+        
+
+        
+    </div>
+</nav>
+
+
+            
+            
+    
+    <div class="visible-element-observer-root" data-selector="main article p">
+        <main>
+            <article>
+                <div class="title">
+                    
+                    
+    
+        <div class="page-header">
+            Building a Mini-SIEM Lab: Sysmon, Vector, Redpanda, ClickHouse &amp; Grafana
+        </div>
+    
+
+
+                    <div class="meta">
+                        
+                            Posted on <time>2026-02-22</time>
+                        
+
+
+                        
+
+                        
+
+                        
+
+                        
+                        
+
+                        
+                        
+
+                        
+                        
+                            <span class="tags-label">::</span>
+                            <span class="tags">
+                                    <a href="https://adasumizox.github.io/Threats-Threads/tags/siem/"
+                                       class="post-tag">SIEM</a>
+                                
+                                    <a href="https://adasumizox.github.io/Threats-Threads/tags/cybersecurity/"
+                                       class="post-tag">Cybersecurity</a>
+                                
+                                    <a href="https://adasumizox.github.io/Threats-Threads/tags/clickhouse/"
+                                       class="post-tag">ClickHouse</a>
+                                
+                                    <a href="https://adasumizox.github.io/Threats-Threads/tags/vector/"
+                                       class="post-tag">Vector</a>
+                                
+                                    <a href="https://adasumizox.github.io/Threats-Threads/tags/grafana/"
+                                       class="post-tag">Grafana</a>
+                                
+                                    <a href="https://adasumizox.github.io/Threats-Threads/tags/podman/"
+                                       class="post-tag">Podman</a>
+                                
+                            </span>
+                        
+
+                        
+
+                    </div>
+                </div>
+
+                
+
+                <section class="body">
+                    <p>Building a Security Information and Event Management (SIEM) system from scratch is one of the best ways to understand how those enterprise system works.</p>
+<p>In this lab, we will build a modern log pipeline using Windows host and WSL2 (Debian). Before diving into the code, let's understand core architecture of our pipeline:</p>
+<ol>
+<li><strong>Ingestion (<a rel="external" href="https://learn.microsoft.com/pl-pl/sysinternals/downloads/sysmon">Sysmon</a> &amp; <a rel="external" href="https://vector.dev/">Vector</a>):</strong> Gathering logs from the operating system is crucial step. Usually we gather logs from different system so we need to transform them into a schema format (ECS/OCSF)</li>
+<li><strong>Buffering (<a rel="external" href="https://www.redpanda.com/">Redpanda</a>):</strong> A messaging queue that temporarily hold logs. This prevent database from crashing if a sudden spike in log volume occurs.</li>
+<li><strong>Storage (<a rel="external" href="https://clickhouse.com/">ClickHouse</a>):</strong> An OLAP Database which is adjusted to handling Real-Time Analytics. It is column-oriented and optimized for analyzing massive amounts of log data.</li>
+<li><strong>Visualization (<a rel="external" href="https://grafana.com/">Grafana</a>):</strong> The dashboard where security analysts run queries and visualize threats.</li>
+</ol>
+<p>Let's build it step-by-step</p>
+<h2 id="phase-1-ingestion-sysmon-vector"><a class="zola-anchor" href="#phase-1-ingestion-sysmon-vector" aria-label="Anchor link for: phase-1-ingestion-sysmon-vector">Phase 1: Ingestion (Sysmon &amp; Vector)</a></h2>
+<p>First we need something to generate high-quality security logs. For that we can use <strong>Sysmon</strong> Windows service that logs process creation, network connection and more.
+We can use some already existing config e.g. <a rel="external" href="https://github.com/SwiftOnSecurity/sysmon-config">SwitftOnSecurity</a></p>
+<p>Open an elevated PowerShell prompt on your Windows machine and run:</p>
+<pre><code># Download config to temp
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/SwiftOnSecurity/sysmon-config/master/sysmonconfig-export.xml -OutFile C:\Windows\Temp\sysmonconfig.xml
+
+# Install sysmon with config
+sysmon64.exe -accepteula -i C:\Windows\Temp\sysmonconfig.xml
+</code></pre>
+<p>Next step is installing <code>Vector</code> by DataDog to read those logs and send them to our pipeline.
+<em>Note: You need to compile Vector from source to include <a rel="external" href="https://github.com/vectordotdev/vector/pull/24305">PR #24305</a>. If you are compiling from Windows, ensure you have <a rel="external" href="https://releases.llvm.org/download.html">LLVM</a> and follow the <a rel="external" href="https://vector.dev/docs/setup/installation/manual/from-source/">Vector manual installation guide</a></em></p>
+<p>Create your Vector configuration file. This config maps raw Windows Event Logs to the Elastic Common Schema (ECS) format, making the data clean and structured.</p>
+<pre><code># vector.yaml
+data_dir: C:\Users\USERNAME\AppData\Local\Temp\vector-data
+
+api:
+  enabled: true
+  address: 127.0.0.1:8686
+
+sources:
+  sysmon_logs:
+    type: windows_event_log
+    channels:
+      - Microsoft-Windows-Sysmon/Operational
+      - Application
+      - System
+      - Security
+
+transforms:
+  remap_ecs:
+    type: remap
+    inputs:
+      - sysmon_logs
+    source: |
+      # Metadata
+      .ecs.version = &quot;8.11.0&quot;
+      .event.kind = &quot;event&quot;
+      .event.code = .event_id
+      .event.provider = .provider_name
+      .event.dataset = .channel
+
+      # Map Log Level
+      .log.level = .level
+
+      # Timestamp
+      .timestamp = parse_timestamp!(.timestamp, format: &quot;%Y-%m-%dT%H:%M:%S.%fZ&quot;)
+      .@timestamp = .timestamp
+
+      # Host
+      .host.name = .computer
+      .host.os.family = &quot;windows&quot;
+      .host.os.platform = &quot;windows&quot;
+
+      # Event_data as primary source of truth
+      ed = .event_data
+
+      if .channel == &quot;Microsoft-Windows-Sysmon/Operational&quot; &amp;&amp; !is_null(ed) {
+        .event.module = &quot;sysmon&quot;
+
+        # Sysmon Event 1: Process Creation
+        if .event_id == 1 {
+          .event.category = &quot;process&quot;
+          .event.type = [&quot;start&quot;]
+
+          .process.pid = to_int!(ed.ProcessId)
+          .process.entity_id = ed.ProcessGuid
+          .process.executable = ed.Image
+          .process.command_line = ed.CommandLine
+          .process.working_directory = ed.CurrentDirectory
+          .process.integrity = ed.IntegrityLevel
+
+          if !is_null(ed.Image) {
+            path_parts = split!(ed.Image, &quot;\\&quot;)
+            .process.name = path_parts[-1]
+          }
+
+          # User Parsing
+          if !is_null(ed.User) {
+            user_parts = split!(ed.User, &quot;\\&quot;)
+            if length(user_parts) == 2 {
+              .user.domain = user_parts[0]
+              .user.name = user_parts[1]
+            } else {
+              .user.name = ed.User
+            }
+          }
+
+          # Hash Parsing
+          if !is_null(ed.Hashes) {
+            hashes = parse_key_value!(ed.Hashes, key_value_delimiter: &quot;=&quot;, field_delimiter: &quot;,&quot;)
+            if !is_null(hashes.MD5) { .process.hash.md5 = hashes.MD5 }
+            if !is_null(hashes.SHA1) { .process.hash.sha1 = hashes.SHA1 }
+            if !is_null(hashes.SHA256) { .process.hash.sha256 = hashes.SHA256 }
+            if !is_null(hashes.IMPHASH) { .process.hash.imphash = hashes.IMPHASH }
+          }
+
+          # Parent Process
+          .process.parent.pid = to_int!(ed.ParentProcessId)
+          .process.parent.entity_id = ed.ParentProcessGuid
+          .process.parent.executable = ed.ParentImage
+          .process.parent.command_line = ed.ParentCommandLine
+
+          if !is_null(ed.ParentImage) {
+            parent_parts = split!(ed.ParentImage, &quot;\\&quot;)
+            .process.parent.name = parent_parts[-1]
+          }
+        }
+
+        # Sysmon Event 3: Network Connection
+        if .event_id == 3 {
+          .event.category = &quot;network&quot;
+          .event.type = [&quot;connection&quot;, &quot;start&quot;]
+
+          .source.ip = ed.SourceIp
+          .source.port = to_int!(ed.SourcePort)
+          .source.domain = ed.SourceHostname
+
+          .destination.ip = ed.DestinationIp
+          .destination.port = to_int!(ed.DestinationPort)
+          .destination.domain = ed.DestinationHostname
+          .network.transport  = ed.Protocol
+
+          .process.pid = to_int!(ed.ProcessId)
+          .process.entity_id = ed.ProcessGuid
+          .process.executable = ed.Image
+          if !is_null(ed.Image) {
+            img_parts = split!(ed.Image, &quot;\\&quot;)
+            .process.name = img_parts[-1]
+          }
+
+          if !is_null(ed.User) {
+            user_parts = split!(ed.User, &quot;\\&quot;)
+            if length(user_parts) == 2 {
+              .user.domain = user_parts[0]
+              .user.name = user_parts[1]
+            }
+          }
+        }
+      } else {
+        # Handle standard Windows logs (Security, System, App)
+        if .channel == &quot;Security&quot; {
+          .event.category = &quot;authentication&quot;
+            if .event_id == 4624 {
+              .event.type = [&quot;start&quot;, &quot;authentication_success&quot;]
+              .event.outcome = &quot;success&quot;
+            }
+            if .event_id == 4625 {
+              .event.type = [&quot;start&quot;, &quot;authentication_failure&quot;]
+              .event.outcome = &quot;failure&quot;
+            }
+        }
+        if .channel == &quot;System&quot; { .event.category = &quot;host&quot; }
+        if .channel == &quot;Application&quot; { .event.category = &quot;process&quot; }
+
+        if !is_null(ed) {
+          if !is_null(ed.TargetUserName) { .user.name = ed.TargetUserName }
+          if !is_null(ed.TargetDomainName) { .user.domain = ed.TargetDomainName }
+          if !is_null(ed.SubjectUserName) &amp;&amp; ed.SubjectUserName != &quot;-&quot; { .user.effective.name = ed.SubjectUserName }
+          if !is_null(ed.IpAddress) &amp;&amp; ed.IpAddress != &quot;-&quot; { .source.ip = ed.IpAddress }
+          if !is_null(ed.IpPort) &amp;&amp; ed.IpPort != &quot;-&quot; { .source.port = to_int(ed.IpPort) ?? null }
+          if !is_null(ed.ProcessName) &amp;&amp; ed.ProcessName != &quot;-&quot; {
+            .process.executable = ed.ProcessName
+            p_parts = split!(ed.ProcessName, &quot;\\&quot;)
+            .process.name = p_parts[-1]
+          }
+          if !is_null(ed.ProcessId) { .process.pid = to_int(ed.ProcessId) ?? null }
+        }
+      }
+
+      # Clean up raw fields to save bandwidth
+      del(.event_data)
+      del(.message)
+      del(.task)
+      del(.level_value)
+      del(.record_id)
+      del(.version)
+
+# Send to Redpanda (Kafka)
+sinks:
+  to_redpanda:
+    type: kafka
+    inputs:
+      - remap_ecs
+    bootstrap_servers: 127.0.0.1:29092
+    topic: event-logs
+    encoding:
+      codec: json
+</code></pre>
+<h2 id="phase-2-3-4-buffering-storage-ui"><a class="zola-anchor" href="#phase-2-3-4-buffering-storage-ui" aria-label="Anchor link for: phase-2-3-4-buffering-storage-ui">Phase 2, 3 &amp; 4: Buffering, Storage, UI</a></h2>
+<p>We will run our backend services in WSL2 (Debian) using Podman. Save following as <code>docker-compose.yml</code></p>
+<pre><code># docker-compose.yml
+version: &#39;3.8&#39;
+
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: redpanda
+    command:
+      - redpanda
+      - start
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:29092
+      # Advertise external to localhost so Windows Vector can reach it. Internal to redpanda:9092 so Clickhouse can reach it.
+      - --advertise-kafka-addr internal://redpanda:9092,external://127.0.0.1:29092
+      - --smp 1
+      - --memory 1G
+      - --mode dev-container
+    ports:
+      - &quot;29092:29092&quot;
+      - &quot;9092:9092&quot;
+      - &quot;8081:8081&quot;
+      - &quot;9644:9644&quot;
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    networks:
+      - siem_net
+
+  clickhouse:
+    image: docker.io/clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    environment:
+      - CLICKHOUSE_PASSWORD=siemlab
+    ports:
+      - &quot;8123:8123&quot; # HTTP port (Grafana uses this)
+      - &quot;9000:9000&quot; # Native client port
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql # Auto-initializes tables
+    depends_on:
+      - redpanda
+    networks:
+      - siem_net
+
+  grafana:
+    image: docker.io/grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - &quot;3000:3000&quot;
+    environment:
+      # Automatically install the ClickHouse plugin
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - clickhouse
+    networks:
+      - siem_net
+
+networks:
+  siem_net:
+    driver: bridge
+
+volumes:
+  redpanda_data:
+  clickhouse_data:
+  grafana_data:
+</code></pre>
+<p>RedPanda does not require additional configuration but ClickHouse and Grafana does.</p>
+<h4 id="initializing-database"><a class="zola-anchor" href="#initializing-database" aria-label="Anchor link for: initializing-database">Initializing Database</a></h4>
+<p>ClickHouse needs to know how to read the logs from Redpanda and where to store them. We do this using a three-step architecture.</p>
+<ol>
+<li><strong>Target Table:</strong> Where the data permanently lives.</li>
+<li><strong>Kafka Engine Table:</strong> A temporary consumer that pulls data from Redpanda</li>
+<li>Materialized View: The pipeline connecting the consumer to the target table.</li>
+</ol>
+<p>Let's save this as <code>init-db.sql</code> in the same directory as previous file so it will be initialized when database is initialized.
+Here ingestion is smaller than our Event source, but we can extend that according to our use case.</p>
+<pre><code>-- init-db.sql
+CREATE DATABASE IF NOT EXISTS siem;
+
+-- 1. Storage Table: The actual storage for your ECS logs
+CREATE TABLE IF NOT EXISTS siem.logs
+(
+    `@timestamp` DateTime64(3),
+    `event.kind` String,
+    `event.category` String,
+    `event.type` Array(String),
+    `event.code` UInt32,
+    `host.name` String,
+    `process.name` String,
+    `process.pid` UInt32,
+    `source.ip` String,
+    `destination.ip` String,
+    `raw_message` String -- Storing the raw JSON is great for students to dig into missing fields
+) ENGINE = MergeTree()
+ORDER BY `@timestamp`;
+
+-- 2. Consumer Table: Pulls raw JSON from Redpanda.
+CREATE TABLE IF NOT EXISTS siem.logs_queue
+(
+    message String
+) ENGINE = Kafka
+SETTINGS kafka_broker_list = &#39;redpanda:9092&#39;,
+         kafka_topic_list = &#39;event-logs&#39;,
+         kafka_group_name = &#39;clickhouse_consumer_group&#39;,
+         kafka_format = &#39;JSONAsString&#39;;
+
+-- 3. Pipeline: The Materialized View translating the Queue into Storage
+CREATE MATERIALIZED VIEW IF NOT EXISTS siem.logs_mv TO siem.logs AS
+SELECT
+    -- Safely parse timestamp, default to current time if missing so the pipeline doesn&#39;t break
+    ifNull(parseDateTime64BestEffortOrNull(JSONExtractString(message, &#39;@timestamp&#39;), 3), now64(3)) AS `@timestamp`,
+    JSONExtractString(message, &#39;event&#39;, &#39;kind&#39;) AS `event.kind`,
+    JSONExtractString(message, &#39;event&#39;, &#39;category&#39;) AS `event.category`,
+
+    -- Convert raw JSON array strings to actual ClickHouse Arrays
+    arrayMap(x -&gt; replaceAll(x, &#39;&quot;&#39;, &#39;&#39;), JSONExtractArrayRaw(message, &#39;event&#39;, &#39;type&#39;)) AS `event.type`,
+
+    JSONExtractUInt(message, &#39;event&#39;, &#39;code&#39;) AS `event.code`,
+    JSONExtractString(message, &#39;host&#39;, &#39;name&#39;) AS `host.name`,
+    JSONExtractString(message, &#39;process&#39;, &#39;name&#39;) AS `process.name`,
+    JSONExtractUInt(message, &#39;process&#39;, &#39;pid&#39;) AS `process.pid`,
+    JSONExtractString(message, &#39;source&#39;, &#39;ip&#39;) AS `source.ip`,
+    JSONExtractString(message, &#39;destination&#39;, &#39;ip&#39;) AS `destination.ip`,
+    message AS `raw_message`
+FROM siem.logs_queue;
+</code></pre>
+<p>Now we need to install <code>podman</code> and <code>podman-compose</code> then start the stack</p>
+<pre><code>sudo apt install podman podman-compose
+sudo podman-compose up -d
+</code></pre>
+<h2 id="troubleshooting-wsl2-podman-issues"><a class="zola-anchor" href="#troubleshooting-wsl2-podman-issues" aria-label="Anchor link for: troubleshooting-wsl2-podman-issues">Troubleshooting WSL2 &amp; Podman Issues</a></h2>
+<p>When running Podman on WSL2, you might encounter a few known issue. Here is how to fix them:</p>
+<p><strong>Error:</strong> <code>WARN: The cgroupv2 manager is set to systemd but there is no systemd user session available</code>
+<em>Fix:</em> You need to enable systemd inside WSL2. Edit or create <code>/etc/wsl.conf</code></p>
+<pre><code>[boot]
+systemd=true
+</code></pre>
+<p><strong>Error:</strong> <code>netavark: nftables error: nft did not return successfully while applying ruleset</code>
+<em>Fix:</em> Switch your firewall to legacy <code>iptables</code>:</p>
+<pre><code>sudo update-alternatives --set iptables /usr/sbin/iptables-legacy
+sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+</code></pre>
+<p>If that fails, force Podman to use iptables via its config</p>
+<pre><code>sudo mkdir -p /etc/containers
+echo -e &quot;[network]\nfirewall_driver = \&quot;iptables\&quot;&quot; | sudo tee -a /etc/containers/containers.conf
+</code></pre>
+<p><strong>Start Fresh</strong>
+If you mess up your configuration and need to wipe your state clean, run:</p>
+<pre><code># Powershell
+wsl --shutdown
+
+# WSL2
+podman system reset -f
+sudo podman network prune -f
+sudo podman-compose down
+</code></pre>
+<h2 id="phase-4-ui-and-threat-hunting-with-grafana"><a class="zola-anchor" href="#phase-4-ui-and-threat-hunting-with-grafana" aria-label="Anchor link for: phase-4-ui-and-threat-hunting-with-grafana">Phase 4: UI and Threat Hunting with Grafana</a></h2>
+<p>If all services are running, it's time to connect Grafana to ClickHouse</p>
+<ol>
+<li>Open browser and go to <code>http://localhost:3000</code></li>
+<li>Navigate to Connections &gt; Data Sources &gt; Add data source</li>
+<li>Select ClickHouse and fill in the details:
+<ol>
+<li><strong>Server Address:</strong> clickhouse</li>
+<li><strong>Protocol:</strong> HTTP</li>
+<li><strong>Secure (TLS):</strong> Off</li>
+<li><strong>Username:</strong> default</li>
+<li><strong>Password:</strong> siemlab</li>
+<li><strong>Default Database (Advanced):</strong> siem</li>
+</ol>
+</li>
+</ol>
+<p>Click "Save &amp; Test". If it fails, check the logs with <code>sudo podman logs grafana</code></p>
+<h4 id="example-queries"><a class="zola-anchor" href="#example-queries" aria-label="Anchor link for: example-queries">Example Queries</a></h4>
+<p>Create a new dashboard, add a visualization, and try these queries to analyze your ingested data.</p>
+<p><strong>Query 1: Find Noisy Processes</strong>
+Great for establishing a baseline of normal activity on host</p>
+<pre><code>SELECT
+    `process.name`,
+    count() AS total_events
+FROM siem.logs
+WHERE $__timeFilter(`@timestamp`) AND `process.name` != &#39;&#39;
+GROUP BY `process.name`
+ORDER BY total_events DESC
+LIMIT 10
+</code></pre>
+<p><img src="https://adasumizox.github.io/Threats-Threads/posts/crc-building-mini-siem-lab-sysmon-vector-redpanda-clickhouse-grafana/query_popular.png" alt="result of query" /></p>
+<p><strong>Query 2: Raw Event Log View</strong>
+A tabular view of recent events</p>
+<pre><code>SELECT
+    `@timestamp` AS Time,
+    `host.name` AS Host,
+    `event.code` AS EventID,
+    `process.name` AS Process,
+    `source.ip` AS SourceIP,
+    `destination.ip` AS DestIP
+FROM siem.logs
+WHERE $__timeFilter(`@timestamp`)
+ORDER BY `@timestamp` DESC
+LIMIT 100
+</code></pre>
+<p><img src="https://adasumizox.github.io/Threats-Threads/posts/crc-building-mini-siem-lab-sysmon-vector-redpanda-clickhouse-grafana/query_all.png" alt="result of query" /></p>
+<p>Now you have local SIEM processing real-time Windows logs.</p>
+
+                </section>
+            </article>
+        </main>
+    </div>
+
+
+
+            
+                
+            
+
+            
+        </div>
+
+        <div class="right-content">
+            
+    
+    
+
+        </div>
+    </body>
+
+</html>
