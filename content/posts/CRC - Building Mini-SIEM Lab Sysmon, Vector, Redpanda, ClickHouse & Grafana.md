@@ -429,6 +429,8 @@ ORDER BY total_events DESC
 LIMIT 10
 ```
 
+[result](./query_popular.png)
+
 **Query 2: Raw Event Log View**
 A tabular view of recent events
 
@@ -445,5 +447,7 @@ WHERE $__timeFilter(`@timestamp`)
 ORDER BY `@timestamp` DESC
 LIMIT 100
 ```
+
+[result](./query_all.png)
 
 Now you have local SIEM processing real-time Windows logs.
