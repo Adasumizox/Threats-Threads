@@ -1,6 +1,6 @@
 +++ 
 title = "Building a Mini-SIEM Lab: Sysmon, Vector, Redpanda, ClickHouse & Grafana"
-date = 2026-02-22
+date = "2026-02-22"
 
 [taxonomies] 
 tags=["SIEM", "Cybersecurity", "ClickHouse", "Vector", "Grafana", "Podman"] 
