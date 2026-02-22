@@ -1,0 +1,13 @@
+base_url = "https://adasumizox.github.io/Threats-Threads"
+title = "Threats & Threads"
+description = "Simple blog about Cybersecurity, Tech & More"
+
+theme = "apollo"
+
+[extra]
+theme = "auto"
+author = "Daniel Jeczen"
+socials = [
+    github = "https://github.com/adasumizox"
+    linkedin = "https://www.linkedin.com/in/daniel-jeczen/"
+]
