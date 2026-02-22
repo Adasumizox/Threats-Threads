@@ -1,6 +1,7 @@
 base_url = "https://adasumizox.github.io/Threats-Threads"
 title = "Threats & Threads"
 description = "Simple blog about Cybersecurity, Tech & More"
+taxonomies = [{ name = "tags" }]
 
 theme = "apollo"
 
