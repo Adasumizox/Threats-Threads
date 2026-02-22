@@ -429,7 +429,7 @@ ORDER BY total_events DESC
 LIMIT 10
 ```
 
-[result](./query_popular.png)
+![result of query](query_popular.png)
 
 **Query 2: Raw Event Log View**
 A tabular view of recent events
@@ -448,6 +448,6 @@ ORDER BY `@timestamp` DESC
 LIMIT 100
 ```
 
-[result](./query_all.png)
+![result of query](query_all.png)
 
 Now you have local SIEM processing real-time Windows logs.
