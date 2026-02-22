@@ -1,4 +1,4 @@
-+++ 
++++
 title = "Building a Mini-SIEM Lab: Sysmon, Vector, Redpanda, ClickHouse & Grafana"
 date = "2026-02-22"
 
