@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en" class="dark light">
+
+    <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="base" content="https:&#x2F;&#x2F;adasumizox.github.io&#x2F;Threats-Threads" />
+
+    
+
+    
+
+    
+    
+    
+        <title>
+            
+                Building a Mini-EDR Agent - Monitoring Process Creation with ETW in C
+            
+        </title>
+
+        
+            <meta property="og:title"
+                  content="Building a Mini-EDR Agent - Monitoring Process Creation with ETW in C" />
+        
+    
+
+    
+        
+            <meta property="og:description" content="Simple blog about Cybersecurity, Tech &amp; More" />
+        
+    
+
+    
+        
+            <meta name="description" content="Simple blog about Cybersecurity, Tech &amp; More" />
+        
+    
+
+    
+    
+
+    
+    
+        <link href=https://adasumizox.github.io/Threats-Threads/fonts.css rel="stylesheet" />
+    
+
+    
+    
+
+    
+    
+
+    
+    
+
+    
+    
+
+    
+    
+
+    
+
+    
+    
+
+
+    
+    
+        <link rel="stylesheet"
+              type="text/css"
+              href="https://adasumizox.github.io/Threats-Threads/theme/light.css" />
+        <link rel="stylesheet"
+              type="text/css"
+              href="https://adasumizox.github.io/Threats-Threads/theme/dark.css"
+              media="(prefers-color-scheme: dark)" />
+    
+
+    <!-- Set the correct theme in the script -->
+
+    
+        <script src=https://adasumizox.github.io/Threats-Threads/js/themetoggle.js></script>
+
+        
+            <script>
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    setTheme("dark");
+                } else {
+                    setTheme("light");
+                }
+            </script>
+        
+    
+
+
+    <link rel="stylesheet"
+          type="text/css"
+          media="screen"
+          href="https://adasumizox.github.io/Threats-Threads/main.css" />
+
+    
+
+    </head>
+
+
+    <body>
+        <div class="left-content">
+            
+            
+        </div>
+
+        <div class="content">
+            <nav>
+    <div class="left-nav">
+        
+            <a href=https:&#x2F;&#x2F;adasumizox.github.io&#x2F;Threats-Threads>Threats &amp; Threads</a>
+        
+
+
+        <div class="socials">
+            
+                
+            
+            
+                <a rel='me' href="https:&#x2F;&#x2F;github.com&#x2F;adasumizox" class="social">
+                    <img alt="github"
+                         src="https://adasumizox.github.io/Threats-Threads/icons/social/github.svg" />
+                </a>
+            
+                <a rel='me' href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;daniel-jeczen&#x2F;" class="social">
+                    <img alt="linkedin"
+                         src="https://adasumizox.github.io/Threats-Threads/icons/social/linkedin.svg" />
+                </a>
+            
+        </div>
+    </div>
+
+    <div class="right-nav">
+        
+            <a href=https://adasumizox.github.io/Threats-Threads/posts style="margin-right: 0.5em">&#x2F;posts</a>
+        
+            <a href=https://adasumizox.github.io/Threats-Threads/tags style="margin-right: 0.5em">&#x2F;tags</a>
+        
+
+        
+
+        
+    </div>
+</nav>
+
+
+            
+            
+    
+    <div class="visible-element-observer-root" data-selector="main article p">
+        <main>
+            <article>
+                <div class="title">
+                    
+                    
+    
+        <div class="page-header">
+            Building a Mini-EDR Agent - Monitoring Process Creation with ETW in C
+        </div>
+    
+
+
+                    <div class="meta">
+                        
+                            Posted on <time>2026-03-26</time>
+                        
+
+
+                        
+
+                        
+
+                        
+
+                        
+                        
+
+                        
+                        
+
+                        
+                        
+                            <span class="tags-label">::</span>
+                            <span class="tags">
+                                    <a href="https://adasumizox.github.io/Threats-Threads/tags/edr/"
+                                       class="post-tag">EDR</a>
+                                
+                                    <a href="https://adasumizox.github.io/Threats-Threads/tags/cybersecurity/"
+                                       class="post-tag">Cybersecurity</a>
+                                
+                                    <a href="https://adasumizox.github.io/Threats-Threads/tags/etw/"
+                                       class="post-tag">ETW</a>
+                                
+                                    <a href="https://adasumizox.github.io/Threats-Threads/tags/windows/"
+                                       class="post-tag">Windows</a>
+                                
+                            </span>
+                        
+
+                        
+
+                    </div>
+                </div>
+
+                
+
+                <section class="body">
+                    <p>In my previous post, we built a Mini-SIEM lab using Sysmon to gather high-quality telemetry from a Windows Host. But have you ever wondered how tools like CrowdStrike or Microsoft Defender actually intercept process creation in real-time?</p>
+<p>Under the hood, most modern Endpoint Detection and Response (EDR) agents rely on a powerful Windows kernel feature called <a rel="external" href="https://learn.microsoft.com/en-us/windows/win32/etw/event-tracing-portal"><strong>Event Tracing for Windows (ETW)</strong></a></p>
+<p>In this post we are going to ditch the pre-built tools and write our own simple EDR agent in C from scratch. Our agent will subscribe to the Windows Kernel process provider and print a real-time data to the console whenever a new process is created.</p>
+<p>Before diving into the code let's understand the core architecture of ETW. It consists of three main components:</p>
+<ul>
+<li><strong>Providers</strong> - The components generating logs (e.g. the Windows Kernel).</li>
+<li><strong>Controllers</strong> - Applications that start and configure tracing sessions.</li>
+<li><strong>Consumers</strong> - Applications that subscribe to the sessions and read the events in real-time or into <code>.etl</code> file.</li>
+</ul>
+<p>Our C program will act as both Controller (creating the trace session) and a Consumer (parsing and printing logs).</p>
+<p>Let's build it step-by-step.</p>
+<h3 id="phase-1-setting-up-the-etw-session-the-controller"><a class="zola-anchor" href="#phase-1-setting-up-the-etw-session-the-controller" aria-label="Anchor link for: phase-1-setting-up-the-etw-session-the-controller">Phase 1: Setting up the ETW Session (The Controller)</a></h3>
+<p>To receive events, we first need to start an ETW trace session.
+First we need to define the unique GUID for the provider we want to listen to.</p>
+<p>In our case it's <code>Microsoft-Windows-Kernel-Process</code>.
+This provider have GUID of <a rel="external" href="https://github.com/repnz/etw-providers-docs/blob/master/Manifests-Win10-18990/Microsoft-Windows-Kernel-Process.xml"><code>{22FB2CD6-0E7B-422B-A0C7-2FAD1F0E716}</code></a></p>
+<pre><code data-lang="c">#define _WIN32_WINNT 0x0600
+#include &lt;windows.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;evntrace.h&gt;
+#include &lt;evntcons.h&gt;
+#include &lt;tdh.h&gt;
+
+#pragma comment(lib, &quot;tdh.lib&quot;)
+#pragma comment(lib, &quot;advapi32.lib&quot;)
+
+static const GUID ProviderGuid =
+{ 0x22FB2CD6, 0x0E7B, 0x422B, { 0xA0, 0xC7, 0x2F, 0xAD, 0x1F, 0xD0, 0xE7, 0x16 } };
+</code></pre>
+<p>In our <code>main</code> function, we configure the <code>EVENT_TRACE_PROPERTIES</code> structure. We tell the Windows Kernel that we want a real-time session (<code>EVENT_TRACE_REAL_TIME_MODE</code>) so we can get events instantly, rather than writing them to a disk file</p>
+<pre><code data-lang="c">// Setup session properties
+TRACE_PROPERTIES sessionProps = { 0 };
+sessionProps.Properties.Wnode.BufferSize = sizeof(TRACE_PROPERTIES);
+sessionProps.Properties.Wnode.Flags = WNODE_FLAG_TRACED_GUID;
+sessionProps.Properties.Wnode.ClientContext = 1; 
+sessionProps.Properties.LogFileMode = EVENT_TRACE_REAL_TIME_MODE; // Crucial for EDR
+sessionProps.Properties.LoggerNameOffset = offsetof(TRACE_PROPERTIES, SessionName);
+
+// Start the trace session (Requires Administrator privileges!)
+ULONG status = StartTraceW(&amp;g_hSession, g_SessionName, &amp;sessionProps.Properties);
+</code></pre>
+<h3 id="phase-2-subscribing-to-kernel-events"><a class="zola-anchor" href="#phase-2-subscribing-to-kernel-events" aria-label="Anchor link for: phase-2-subscribing-to-kernel-events">Phase 2: Subscribing to Kernel Events</a></h3>
+<p>Starting a session isn't enough. Right now, it's empty. We need to tell session to listen to our specific Kernel Provider using <code>EnableTraceEx2</code>.</p>
+<pre><code data-lang="c">status = EnableTraceEx2(
+    g_hSession,
+    &amp;ProviderGuid,
+    EVENT_CONTROL_CODE_ENABLE_PROVIDER,
+    TRACE_LEVEL_VERBOSE,
+    0xFFFFFFFFFFFFFFFF, // Match any keywords (get all events)
+    0,
+    0,
+    NULL
+);
+</code></pre>
+<h3 id="phase-3-consuming-the-events-the-consumer"><a class="zola-anchor" href="#phase-3-consuming-the-events-the-consumer" aria-label="Anchor link for: phase-3-consuming-the-events-the-consumer">Phase 3: Consuming the Events (The Consumer)</a></h3>
+<p>Now the logs are flowing into our session, we need to read them. We can set up an <code>EVENT_TRACE_LOGFILEW</code> structure, point it to our session name, and provide a callback function (<code>EventRecordCallback</code>) that Windows will trigger every time a new event arrives.</p>
+<p>Finally, we call <code>ProcessTrace()</code>. This is a blocking function - it will sit in an infinite loop, monitoring queue and firing our callback for every event until we stop the program.</p>
+<pre><code data-lang="c">EVENT_TRACE_LOGFILEW logFile = { 0 };
+logFile.LoggerName = g_SessionName;
+logFile.ProcessTraceMode = PROCESS_TRACE_MODE_REAL_TIME | PROCESS_TRACE_MODE_EVENT_RECORD;
+logFile.EventRecordCallback = EventRecordCallback; // The function that handles data
+
+TRACEHANDLE hTrace = OpenTraceW(&amp;logFile);
+
+printf(&quot;Listening for Process Starts... (Press Ctrl+C to stop)\n&quot;);
+status = ProcessTrace(&amp;hTrace, 1, NULL, NULL)l // Blocks and process events
+</code></pre>
+<h3 id="phase-4-parsing-the-payload-with-tdh"><a class="zola-anchor" href="#phase-4-parsing-the-payload-with-tdh" aria-label="Anchor link for: phase-4-parsing-the-payload-with-tdh">Phase 4: Parsing the Payload with TDH</a></h3>
+<p>Raw ETW data is unformatted binary payload. Parsing it manually is teribble. We also need to remember that with Windows update it could change and we need to modify our code once again. Thankfully, Microsoft provides the <strong>Trace Data Helper (TDH)</strong> API, which uses the provider's manifest to magically parse the binary payload into readable strings and integers.</p>
+<p>In our <code>EventRecordCallback</code>, we filter out noise and only look for Event ID <code>1</code> (Process Creation). We then use <code>TdhGetProperty</code> to extract specific fields like <code>ProcessID</code>, <code>ImageName</code></p>
+<pre><code data-lang="c">VOID WINAPI EventRecordCallback(PEVENT_RECORD pEvent)
+{
+    if (memcmp(&amp;pEvent-&gt;EventHeader.ProviderId, &amp;ProviderGuid, sizeof(GUID)) != 0) return;
+
+    // Event ID 1 == Process Start
+    if (pEvent-&gt;EventHeader.EventDescriptor.Id == 1)
+    {
+        printf(&quot;\n[+] Process Started!\n&quot;);
+        printf(&quot;  ProcessID: %lu\n&quot;, GetUint32Property(pEvent, L&quot;ProcessID&quot;));
+        printf(&quot;  ParentProcessID: %lu\n&quot;, GetUint32Property(pEvent, L&quot;ParentProcessID&quot;));
+
+        PrintStringProperty(pEvent, L&quot;ImageName&quot;);
+
+        printf(&quot;--------------------------------------------------\n&quot;);
+    }
+}
+</code></pre>
+<p><em>(Note: I wrote two helper functions, <code>GetUint32Property</code> and <code>PrintStringProperty</code>, which wrap the <code>TdhGetProperty</code> API to keep the callback clean. You can see them in the full source code).</em></p>
+<h3 id="graceful-shutdown"><a class="zola-anchor" href="#graceful-shutdown" aria-label="Anchor link for: graceful-shutdown">Graceful Shutdown</a></h3>
+<p>ETW sessions live in the Windows Kernel. If our program crashes or exits without stopping the trace, the session remains active, consuming system resources. To prevent "zombie" sessions, we capture <code>Ctrl+C</code> signals and cleanly shut down using <code>ControlTraceW</code></p>
+<pre><code data-lang="c">BOOL WINAPI ConsoleHandler(DWORD signal) {
+    if (signal == CTRL_C_EVENT &amp;&amp; g_hSession) {
+        printf(&quot;\nStopping trace session gracefully...\n&quot;);
+        // Tell the kernel to stop our session
+        ControlTraceW(g_hSession, g_SessionName, &amp;stopProps.Properties, EVENT_TRACE_CONTROL_STOP);
+        return TRUE;
+    }
+    return FALSE;
+}
+</code></pre>
+<h3 id="compiling-and-running"><a class="zola-anchor" href="#compiling-and-running" aria-label="Anchor link for: compiling-and-running">Compiling and Running</a></h3>
+<p>To compile this agent, you can use the MSVC compiler included with Visual Studion. Open the <strong>x64 Native Tools Command Prompt</strong> and run:</p>
+<pre><code data-lang="cmd">cl.exe /O2 mini_edr.c
+</code></pre>
+<p><strong>Testing the Agent:</strong>
+Because ETW interacts directly with the Windows Kernel, <strong>you must run this executable as an Administrator</strong>.</p>
+<p>Open an elevated command prompt, run <code>mini_edr.exe</code>, and then open an application like <code>notepad.exe</code> or <code>calc.exe</code>. You will see your mini-EDR catch the execution:</p>
+<pre><code>PS &gt; .\mini_edr.exe
+Trace Session &#39;ProcMonTrace_18872&#39; Started.
+Listening for Process Starts... (Press Ctrl+C to stop)
+
+[+] Process Started!
+  ProcessID: 18956
+  ParentProcessID: 1600
+  ImageName: \Device\HarddiskVolume3\Windows\System32\dllhost.exe
+--------------------------------------------------
+
+[+] Process Started!
+  ProcessID: 19012
+  ParentProcessID: 6692
+  ImageName: \Device\HarddiskVolume3\Program Files\WindowsApps\Microsoft.WindowsNotepad_11.2512.26.0_x64__8wekyb3d8bbwe\Notepad\Notepad.exe
+--------------------------------------------------
+
+[+] Process Started!
+  ProcessID: 19200
+  ParentProcessID: 2040
+  ImageName: \Device\HarddiskVolume3\Program Files\WindowsApps\Microsoft.WindowsCalculator_11.2508.4.0_x64__8wekyb3d8bbwe\CalculatorApp.exe
+--------------------------------------------------
+</code></pre>
+<h3 id="conclusion"><a class="zola-anchor" href="#conclusion" aria-label="Anchor link for: conclusion">Conclusion</a></h3>
+<p>Congratulations! You've just written a core component of an EDR engine.</p>
+<p>While commercial EDRs and massive layers of complexity (like hooking API calls, injecting DLLs, utilizing kernel callbacks like <code>PsSetCreateProcessNotifyRoutine</code>,
+and sending data to cloud AI agents), consuming ETW real-time feeds is the fundamental building block for modern Windows environments.</p>
+<p>In future labs, we might get into upgrading our agent by writing Kernel Driver.</p>
+
+                </section>
+            </article>
+        </main>
+    </div>
+
+
+
+            
+                
+            
+
+            
+        </div>
+
+        <div class="right-content">
+            
+    
+    
+
+        </div>
+    </body>
+
+</html>
